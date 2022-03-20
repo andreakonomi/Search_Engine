@@ -1,5 +1,6 @@
 ﻿using Dapper;
 using Microsoft.Extensions.Configuration;
+using SearchEngine.Library.Models;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -38,6 +39,23 @@ namespace SearchEngine.Library.Internal
         {
             using IDbConnection connection = new SQLiteConnection(_connString);
             connection.Execute(query, parameters);
+        }
+
+        //public void SaveMultipleData<T, U>(string query, List<T> parameters, U constantParameters)
+        //{
+        //    foreach (var param in parameters)
+        //    {
+        //        SaveData(query, new { param , constantParameters});
+        //    }
+        //}
+
+        public void SaveTokens(string query, ICollection<TokenForCreationModel> tokens, int docId)
+        {
+            using IDbConnection connection = new SQLiteConnection(_connString);
+            foreach (var token in tokens)
+            {
+                connection.Execute(query, new { token.Content, docId });
+            }
         }
 
     }
