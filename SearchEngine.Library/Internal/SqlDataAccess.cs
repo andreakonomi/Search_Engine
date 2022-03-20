@@ -16,30 +16,17 @@ namespace SearchEngine.Library.Internal
     /// </summary>
     internal class SqlDataAccess
     {
-        private readonly IConfiguration _config;
+        //private readonly IConfiguration _config;
+        private readonly string _connString;
 
-        public SqlDataAccess(IConfiguration config)
+        public SqlDataAccess(string connectionString)
         {
-            _config = config;
+            _connString = connectionString;
         }
 
-        /// <summary>
-        /// Gets the connection string with the specified key from
-        /// the configurations provided.
-        /// </summary>
-        /// <param name="name">The key of the connection string on the
-        /// configurations.</param>
-        /// <returns>The connection string to be used.</returns>
-        public string GetConnectionString(string name)
+        public List<T> LoadData<T, U>(string storedProcedure, U parameters)
         {
-            return _config.GetConnectionString(name);
-        }
-
-        public List<T> LoadData<T, U>(string storedProcedure, U parameters, string connectionStringName)
-        {
-            string connectionString = GetConnectionString(connectionStringName);
-
-            using IDbConnection connection = new SqlConnection(connectionString);
+            using IDbConnection connection = new SqlConnection(_connString);
             List<T> rows = connection.Query<T>(storedProcedure, parameters,
                 commandType: CommandType.StoredProcedure).ToList();
 
@@ -47,11 +34,9 @@ namespace SearchEngine.Library.Internal
         }
 
         // refactor with above method partially?
-        public void SaveData<T>(string storedProcedure, T parameters, string connectionStringName)
+        public void SaveData<T>(string storedProcedure, T parameters)
         {
-            string connectionString = GetConnectionString(connectionStringName);
-
-            using IDbConnection connection = new SqlConnection(connectionString);
+            using IDbConnection connection = new SqlConnection(_connString);
             connection.Execute(storedProcedure, parameters,
                 commandType: CommandType.StoredProcedure);
         }

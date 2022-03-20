@@ -11,14 +11,16 @@ namespace SearchEngine.Library.DataAccess
 {
     public class DocumentData
     {
-        private readonly IConfiguration _config;
+        //private readonly IConfiguration _config;
+        private readonly string _connString;
 
-        public DocumentData(IConfiguration config)
+        public DocumentData(string connectionString)
         {
-            _config = config;
+            //_config = config;
+            _connString = connectionString;
         }
 
-        public void CreateDocument(DocumentForCreationModel document, string dbKeyName = "")
+        public void CreateDocument(DocumentForCreationModel document)
         {
             // more validation
 
@@ -33,19 +35,20 @@ namespace SearchEngine.Library.DataAccess
             //    no - insert document only
             // 3. insert tokens for the document
 
-            SqlDataAccess sql = new(_config);
-            DocumentDbModel doc = sql.LoadData<DocumentDbModel, dynamic>("dbo.GetDocument", new { document.Id }, dbKeyName).FirstOrDefault();
+            SqlDataAccess sql = new(_connString);
+            DocumentDbModel doc = sql.LoadData<DocumentDbModel, dynamic>("dbo.GetDocument", new { DocumentId = document.Id }).FirstOrDefault();
 
             if (doc is null)
             {
-                sql.SaveData<dynamic>("dbo.InsertDocument", new { document.Id }, dbKeyName);
+                sql.SaveData<dynamic>("dbo.InsertDocument", new { DocumentId = document.Id });
             }
             else
             {
                 // delete tokens for old instance
             }
             
-            sql.SaveData<dynamic>("dbo.InsertTokensForDocument", new { document.Id, TokensList = document.Tokens }, dbKeyName);
+
+            sql.SaveData<dynamic>("dbo.InsertTokensForDocument", new { DocumentId = document.Id, TokensList = document.Tokens });
         }
     }
 }
