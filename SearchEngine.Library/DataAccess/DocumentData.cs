@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Dapper;
+using Microsoft.Extensions.Configuration;
 using SearchEngine.Library.Internal;
 using SearchEngine.Library.Models;
 using System;
@@ -36,7 +37,11 @@ namespace SearchEngine.Library.DataAccess
             // 3. insert tokens for the document
 
             SqlDataAccess sql = new(_connString);
-            DocumentDbModel doc = sql.LoadData<DocumentDbModel, dynamic>("dbo.GetDocument", new { DocumentId = document.Id }).FirstOrDefault();
+            string query = "SELECT Id FROM Documents WHERE Id = @Id";
+            var parameters = new DynamicParameters();
+            parameters.Add("@Id", document.Id, System.Data.DbType.Int32);
+
+            DocumentDbModel doc = sql.LoadData<DocumentDbModel, dynamic>(query, parameters).FirstOrDefault();
 
             if (doc is null)
             {

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Data.SQLite;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,21 +25,19 @@ namespace SearchEngine.Library.Internal
             _connString = connectionString;
         }
 
-        public List<T> LoadData<T, U>(string storedProcedure, U parameters)
+        public List<T> LoadData<T, U>(string query, U parameters)
         {
-            using IDbConnection connection = new SqlConnection(_connString);
-            List<T> rows = connection.Query<T>(storedProcedure, parameters,
-                commandType: CommandType.StoredProcedure).ToList();
+            using IDbConnection connection = new SQLiteConnection(_connString);
+            List<T> rows = connection.Query<T>(query, parameters).ToList();
 
             return rows;
         }
 
         // refactor with above method partially?
-        public void SaveData<T>(string storedProcedure, T parameters)
+        public void SaveData<T>(string query, T parameters)
         {
-            using IDbConnection connection = new SqlConnection(_connString);
-            connection.Execute(storedProcedure, parameters,
-                commandType: CommandType.StoredProcedure);
+            using IDbConnection connection = new SQLiteConnection(_connString);
+            connection.Execute(query, parameters);
         }
 
     }

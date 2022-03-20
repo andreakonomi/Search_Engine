@@ -7,10 +7,17 @@
 
   <ItemGroup>
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="6.0.0" />
+    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.115.5" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\SearchEngine.Library\SearchEngine.Library.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="SearchEngDb.db">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
