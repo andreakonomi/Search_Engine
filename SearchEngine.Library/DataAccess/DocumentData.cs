@@ -1,5 +1,6 @@
 ﻿using Dapper;
 using Microsoft.Extensions.Configuration;
+using SearchEngine.Library.Helpers;
 using SearchEngine.Library.Internal;
 using SearchEngine.Library.Models;
 using System;
@@ -39,6 +40,24 @@ namespace SearchEngine.Library.DataAccess
             }
 
             InsertTokensForDocument(document, sql);
+        }
+
+        public List<int> SearchByTokens(string queryExpression)
+        {
+            if (string.IsNullOrWhiteSpace(queryExpression))
+            {
+                return null;
+            }
+
+            //string query = queryExpression
+            //    .Replace("|", " or Content = ", StringComparison.OrdinalIgnoreCase)
+            //    .Replace("&", " and Content = ", StringComparison.OrdinalIgnoreCase)
+            //    .Replace("(", "(Content = ", StringComparison.OrdinalIgnoreCase);
+
+            SqlDataAccess sql = new SqlDataAccess(_connString);
+            var results = SearchDocuments(sql, queryExpression.Trim());
+
+            return results;
         }
 
         private void CheckIfDocumentIsValid(DocumentForCreationModel document)
@@ -88,6 +107,61 @@ namespace SearchEngine.Library.DataAccess
                 throw new Exception($"An error occurred while reading the document with id:{Id} from the database.");
             }
         }
+
+        private List<int> SearchDocuments(SqlDataAccess sql, string queryExpression)
+        {
+            queryExpression = FormatFieldValuesForSqlQuery(queryExpression);
+
+            queryExpression = queryExpression
+                .Replace("|", " or Content = ", StringComparison.OrdinalIgnoreCase)
+                .Replace("&", " and Content = ", StringComparison.OrdinalIgnoreCase)
+                .Replace("(", "(Content = ", StringComparison.OrdinalIgnoreCase);
+
+            string query = "SELECT DISTINCT DocumentId from Tokens WHERE ";
+
+            if (queryExpression.StartsWith('('))
+            {
+                query += queryExpression;
+            }
+            else
+            {
+                query += "Content = ";
+                query += queryExpression;
+            }
+
+            var result = sql.LoadData<int, dynamic>(query, new { });
+            return result;
+        }
+
+        private string FormatFieldValuesForSqlQuery(string query)
+        {
+            string removedChars = query
+                .Replace("(", null)
+                .Replace(")", null)
+                .Replace("|", null)
+                .Replace("&", null);
+
+            var tokens = removedChars.Split(" ");
+
+            foreach (var value in tokens)
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    continue;
+                }
+
+                query = query.ReplaceWholeWord(value, $"'{value}'");
+            }
+
+            return query;
+        }
+
+        //private string FormatFieldValuesForSqlQuery2(string query)
+        //{
+        //    // (a | b) & c
+
+
+        //}
 
         private void InsertTokensForDocument(DocumentForCreationModel document, SqlDataAccess sql)
         {

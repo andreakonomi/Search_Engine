@@ -17,7 +17,15 @@ namespace SearchEngine.Cmd
 
             while (input.ToLower() != "Exit".ToLower())
             {
-                Console.WriteLine(ProccessInput(input));
+                if (input.StartsWith("query"))
+                {
+                    Console.WriteLine(SearchData(input));
+                }
+                else
+                {
+                    Console.WriteLine(ProccessInput(input));
+                }
+
                 input = PromptUser();
             }
 
@@ -53,6 +61,31 @@ namespace SearchEngine.Cmd
             {
                 return $"index error {ex.Message}";
             }
+        }
+
+        private static string SearchData(string query)
+        {
+            query = query.Remove(0, 5);
+
+            string connString = Helper.GetConnectionString("Demo_Db");
+            var docData = new DocumentData(connString);
+
+            var result = docData.SearchByTokens(query);
+            string valuesFound = ConvertListToString(result);
+
+            return $"query results {valuesFound}";
+        }
+
+        private static string ConvertListToString(List<int> list)
+        {
+            StringBuilder builder = new();
+
+            foreach (var item in list)
+            {
+                builder.Append($" {item}");
+            }
+
+            return builder.ToString();
         }
 
         static DocumentForCreationModel ParseDocument(string input)
