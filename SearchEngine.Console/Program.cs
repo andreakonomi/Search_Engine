@@ -3,6 +3,7 @@ using SearchEngine.Library.DataAccess;
 using SearchEngine.Library.Models;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SearchEngine.Cmd
 {
@@ -12,20 +13,22 @@ namespace SearchEngine.Cmd
         {
             Console.Write("Insert a token: ");
 
-            string token = Console.ReadLine();
-            if (string.IsNullOrWhiteSpace(token))
+            string input = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(input))
             {
-                Console.WriteLine("Empty tokens are not accepted!");
+                Console.WriteLine("You didn't input anything.");
             }
 
             // throws nullrefExc if not matching 
             string connString = Helper.GetConnectionString("Demo_Db");
 
+            var document = ParseDocument(input);
             var docData = new DocumentData(connString);
-            docData.CreateDocument(CreateDocument(token));
+
+            docData.CreateDocument(document);
         }
 
-        static DocumentForCreationModel CreateDocument(string input)
+        static DocumentForCreationModel ParseDocument(string input)
         {
             var docCreation = new DocumentForCreationModel();
             var tokensArray = input.Split(' ');
@@ -40,13 +43,29 @@ namespace SearchEngine.Cmd
 
         static ICollection<TokenForCreationModel> ParseContent(string[] token)
         {
+            string tokenContent = "";
+            bool valid = true;
+
             List<TokenForCreationModel> tokens = new();
             for (int i = 1; i < token.Length; i++)
             {
+                tokenContent = token[i];
+                valid = CheckTokenIfValid(tokenContent);
+
+                if (!valid)
+                {
+                    throw new FormatException("All tokens need to be alphanumerical.");
+                }
+
                 tokens.Add(new TokenForCreationModel { Content = token[i] });
             }
 
             return tokens;
+        }
+
+        static bool CheckTokenIfValid(string token)
+        {
+            return token.All(x => char.IsLetterOrDigit(x));
         }
     }
 }

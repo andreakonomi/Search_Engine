@@ -41,6 +41,11 @@ namespace SearchEngine.Library.Internal
             connection.Execute(query, parameters);
         }
 
+        public void DeleteData<T>(string query, T parameters)
+        {
+            SaveData(query, parameters);
+        }
+
         //public void SaveMultipleData<T, U>(string query, List<T> parameters, U constantParameters)
         //{
         //    foreach (var param in parameters)
