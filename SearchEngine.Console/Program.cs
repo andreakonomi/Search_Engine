@@ -11,21 +11,46 @@ namespace SearchEngine.Cmd
     {
         static void Main(string[] args)
         {
-            Console.Write("Insert a token: ");
+            string input;
+            input = PromptUser();
 
-            string input = Console.ReadLine();
-            if (string.IsNullOrWhiteSpace(input))
+            while (input.ToLower() != "Exit".ToLower())
             {
-                Console.WriteLine("You didn't input anything.");
+                Console.WriteLine(ProccessInput(input));
+                input = PromptUser();
             }
 
-            // throws nullrefExc if not matching 
-            string connString = Helper.GetConnectionString("Demo_Db");
+        }
 
-            var document = ParseDocument(input);
-            var docData = new DocumentData(connString);
+        private static string PromptUser()
+        {
+            Console.Write("Press 'Exit' or insert a token: ");
+            return Console.ReadLine();
+        }
 
-            docData.CreateDocument(document);
+        private static string ProccessInput(string input)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(input))
+                {
+                    return "You didn't input anything.";
+                }
+
+                // move this
+                string connString = Helper.GetConnectionString("Demo_Db");
+
+                var document = ParseDocument(input);
+                var docData = new DocumentData(connString);
+
+                docData.CreateDocument(document);
+
+                return $"index ok {document.Id}";
+            }
+            catch (Exception ex)
+            {
+                return $"index error {ex.Message}";
+            }
         }
 
         static DocumentForCreationModel ParseDocument(string input)

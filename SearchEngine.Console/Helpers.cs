@@ -12,7 +12,15 @@ namespace SearchEngine.Cmd
     {
         public static string GetConnectionString(string name)
         {
-            return ConfigurationManager.ConnectionStrings[name].ConnectionString;
+            try
+            {
+                return ConfigurationManager.ConnectionStrings[name].ConnectionString;
+
+            }
+            catch (Exception)
+            {
+                throw new Exception($"Connection string {name} is either missing or wrong.");
+            }        
         }
 
     }
