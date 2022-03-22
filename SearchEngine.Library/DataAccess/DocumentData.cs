@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SearchEngine.Library.Entities;
+using Dapper;
 
 namespace SearchEngine.Library.DataAccess
 {
@@ -109,39 +110,84 @@ namespace SearchEngine.Library.DataAccess
 
         private List<int> SearchDocuments(SqlDataAccess sql, string queryExpression)
         {
-            queryExpression = FormatFieldValuesForSqlQuery(queryExpression);
+            DynamicParameters dynPars = new();
+            var query = CreateQueryForData(queryExpression, dynPars);
 
-            queryExpression = queryExpression
-                .Replace("|", " or Content =", StringComparison.OrdinalIgnoreCase)
-                .Replace("&", " and Content =", StringComparison.OrdinalIgnoreCase)
-                .Replace("(", "(Content = ", StringComparison.OrdinalIgnoreCase);
 
-            string query = "SELECT DISTINCT DocumentId from Tokens WHERE ";
 
-            if (queryExpression.StartsWith('('))
-            {
-                query += queryExpression;
-            }
-            else
-            {
-                query += "Content = ";
-                query += queryExpression;
-            }
+            //queryExpression = FormatFieldValuesForSqlQuery(queryExpression);
+
+            //queryExpression = queryExpression
+            //    .Replace("|", " or Content =", StringComparison.OrdinalIgnoreCase)
+            //    .Replace("&", " and Content =", StringComparison.OrdinalIgnoreCase)
+            //    .Replace("(", "(Content = ", StringComparison.OrdinalIgnoreCase);
+
+            //string query = "SELECT DISTINCT DocumentId from Tokens WHERE ";
+
+            //if (queryExpression.StartsWith('('))
+            //{
+            //    query += queryExpression;
+            //}
+            //else
+            //{
+            //    query += "Content = ";
+            //    query += queryExpression;
+            //}
 
             //var newQuery = CheckQueryForAndCondition(query);
 
-            var result = sql.LoadData<int, dynamic>(query, new { });
+            var result = sql.LoadData<int, dynamic>(query, dynPars);
             return result;
         }
 
-        //private string CheckQueryForAndCondition(string query)
-        //{
-        //    int index = query.IndexOf('&');
-        //    string firstPart = query.Substring(0, index + 1);
+        private string CreateQueryForData(string query, DynamicParameters dynPars)
+        {
+            //a
+            //a & b
+            //a & (b | c)
+            string finalQuery;
+            var splitted = query.Split(" ");
+            int count = splitted.Count();
 
+            string parToPass = "";
+            int index = 1;
 
+            parToPass = GiveNewParName(ref index);
+            dynPars.Add(parToPass, splitted[0]);
 
-        //}
+            // add check for each token if alphanumerical??
+            finalQuery = $"SELECT DocumentId FROM Tokens WHERE Content = {parToPass}";
+
+            if(count == 3)
+            {
+                parToPass = GiveNewParName(ref index);
+                dynPars.Add(parToPass, splitted[2]);
+                string boolOperator = splitted[1];
+
+                if (boolOperator == "|")
+                {
+                    finalQuery += $" OR Content = {parToPass}";
+                }
+                else if(boolOperator == "&")
+                {
+                    finalQuery += $"\nINTERSECT\nSELECT DocumentId FROM Tokens WHERE Content = {parToPass}";
+                }
+            }
+            else
+            {
+                // triple query
+            }
+            {
+
+            }
+
+            return finalQuery;
+        }
+
+        private string GiveNewParName(ref int index)
+        {
+            return $"@par{index++}";
+        }
 
         private string FormatFieldValuesForSqlQuery(string query)
         {

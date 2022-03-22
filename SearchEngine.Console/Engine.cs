@@ -93,7 +93,7 @@ namespace SearchEngine.Cmd
 
             try
             {
-                query = query.Remove(0, 5);
+                query = query.Trim();
 
                 response = CheckForCachedResponse(query);
                 if (response is null)
