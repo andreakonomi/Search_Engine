@@ -153,7 +153,7 @@ namespace SearchEngine.Library.DataAccess
             int index = 1;
 
             parToPass = GiveNewParName(ref index);
-            dynPars.Add(parToPass, splitted[0]);
+            //dynPars.Add(parToPass, splitted[0]);
 
             // add check for each token if alphanumerical??
             finalQuery = $"SELECT DocumentId FROM Tokens WHERE Content = {parToPass}";
@@ -166,23 +166,98 @@ namespace SearchEngine.Library.DataAccess
 
                 if (boolOperator == "|")
                 {
-                    finalQuery += $" OR Content = {parToPass}";
+                    finalQuery = AddOrClauseForNextArg(finalQuery, parToPass);
                 }
                 else if(boolOperator == "&")
                 {
-                    finalQuery += $"\nINTERSECT\nSELECT DocumentId FROM Tokens WHERE Content = {parToPass}";
+                    finalQuery = AddAndClauseForNextArg(finalQuery, parToPass);
                 }
             }
             else
             {
-                // triple query
-            }
-            {
-
+                finalQuery = HandleMultipleParameters(query, dynPars);
             }
 
             return finalQuery;
         }
+
+        private string HandleMultipleParameters(string initialQuery, DynamicParameters dynPars)
+        {
+            bool onlyAnds = !initialQuery.Contains('|');
+            bool onlyOrs = !initialQuery.Contains('&');
+            string finalQuery = "";
+
+            if (onlyAnds || onlyOrs)
+            {
+                initialQuery.Replace("(", null);
+                initialQuery.Replace(")", null);
+
+                var splittedArray = initialQuery.Split(" ");
+                string par1 = splittedArray[0];
+                string par2 = splittedArray[2];
+                string par3 = splittedArray[4];
+
+                if (onlyAnds)
+                {
+                    finalQuery = GiveOnlyDoubleAndsQuery(dynPars, par1, par2, par3);
+                }
+
+                if (onlyOrs)
+                {
+                    finalQuery = GiveOnlyDoubleOrsQuery(dynPars, par1, par2, par3);
+                }
+            }
+            else
+            {
+                // different 
+            }
+
+            return finalQuery;
+        }
+
+        private string GiveOnlyDoubleAndsQuery(DynamicParameters dynPars, string par1, string par2, string par3)
+        {
+            dynPars.Add("@par1", par1);
+            dynPars.Add("@par2", par2);
+            dynPars.Add("@par3", par3);
+
+            return
+                $@"
+            select DocumentId from Tokens where Content = @par1
+            intersect
+            select DocumentId from Tokens where Content = @par2
+            intersect
+            select DocumentId from Tokens where Content = @par3
+                ";
+        }
+
+        private string GiveOnlyDoubleOrsQuery(DynamicParameters dynPars, string par1, string par2, string par3)
+        {
+            dynPars.Add("@par1", par1);
+            dynPars.Add("@par2", par2);
+            dynPars.Add("@par3", par3);
+
+
+            return
+                $@"
+            select DocumentId from Tokens 
+            where Content = @par1
+                or Content = @par2
+                or Content = @par3
+                ";
+
+        }
+
+        private string AddAndClauseForNextArg(string initialQuery, string parToPass)
+        {
+            return $"{initialQuery} \nINTERSECT\nSELECT DocumentId FROM Tokens WHERE Content = {parToPass}";
+        }
+
+        private string AddOrClauseForNextArg(string initialQuery, string parToPass)
+        {
+            return $"{initialQuery} OR Content = {parToPass}";
+        }
+
 
         private string GiveNewParName(ref int index)
         {
