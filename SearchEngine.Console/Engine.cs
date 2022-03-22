@@ -10,6 +10,8 @@ namespace SearchEngine.Cmd
 {
     public static class Engine
     {
+        static Dictionary<string, List<int>> TokenFilterCache = new();
+
         public static void Run()
         {
             string input;
@@ -49,11 +51,13 @@ namespace SearchEngine.Cmd
 
                 // move this
                 string connString = Helper.GetConnectionString("Demo_Db");
-
                 var document = ParseDocument(input);
                 var docData = new DocumentData(connString);
 
                 docData.CreateDocument(document);
+
+                // cache no longer valid
+                TokenFilterCache.Clear();
 
                 return $"index ok {document.Id}";
             }
@@ -65,15 +69,40 @@ namespace SearchEngine.Cmd
 
         private static string SearchData(string query)
         {
+            string valuesFound;
+            List<int> response;
             query = query.Remove(0, 5);
 
-            string connString = Helper.GetConnectionString("Demo_Db");
-            var docData = new DocumentData(connString);
+            response = CheckForCachedResponse(query);
+            if (response is null)
+            {
+                string connString = Helper.GetConnectionString("Demo_Db");
+                var docData = new DocumentData(connString);
 
-            var result = docData.SearchByTokens(query);
-            string valuesFound = ConvertListToString(result);
+                response = docData.SearchByTokens(query);
+                AddToCache(query, response);
+            }
+
+            valuesFound = ConvertListToString(response);
 
             return $"query results {valuesFound}";
+        }
+
+        private static List<int> CheckForCachedResponse(string filterExpression)
+        {
+            TokenFilterCache.TryGetValue(filterExpression, out List<int> idsFound);
+
+            return idsFound;
+        }
+
+        private static void AddToCache(string queryExpression, List<int> ids)
+        {
+            if (TokenFilterCache.Count == 100)
+            {
+                TokenFilterCache.Clear();
+            }
+
+            TokenFilterCache.Add(queryExpression, ids);
         }
 
         private static string ConvertListToString(List<int> list)

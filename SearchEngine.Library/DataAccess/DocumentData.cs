@@ -113,8 +113,8 @@ namespace SearchEngine.Library.DataAccess
             queryExpression = FormatFieldValuesForSqlQuery(queryExpression);
 
             queryExpression = queryExpression
-                .Replace("|", " or Content = ", StringComparison.OrdinalIgnoreCase)
-                .Replace("&", " and Content = ", StringComparison.OrdinalIgnoreCase)
+                .Replace("|", " or Content =", StringComparison.OrdinalIgnoreCase)
+                .Replace("&", " and Content =", StringComparison.OrdinalIgnoreCase)
                 .Replace("(", "(Content = ", StringComparison.OrdinalIgnoreCase);
 
             string query = "SELECT DISTINCT DocumentId from Tokens WHERE ";
@@ -129,9 +129,20 @@ namespace SearchEngine.Library.DataAccess
                 query += queryExpression;
             }
 
+            //var newQuery = CheckQueryForAndCondition(query);
+
             var result = sql.LoadData<int, dynamic>(query, new { });
             return result;
         }
+
+        //private string CheckQueryForAndCondition(string query)
+        //{
+        //    int index = query.IndexOf('&');
+        //    string firstPart = query.Substring(0, index + 1);
+
+
+
+        //}
 
         private string FormatFieldValuesForSqlQuery(string query)
         {
@@ -155,13 +166,6 @@ namespace SearchEngine.Library.DataAccess
 
             return query;
         }
-
-        //private string FormatFieldValuesForSqlQuery2(string query)
-        //{
-        //    // (a | b) & c
-
-
-        //}
 
         private void InsertTokensForDocument(DocumentForCreationModel document, SqlDataAccess sql)
         {
