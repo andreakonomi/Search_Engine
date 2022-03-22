@@ -37,15 +37,25 @@ namespace SearchEngine.Cmd
 
             if (input.IsIndexInput())
             {
+                input = RemoveInputPrefix(input);
                 return InsertInput(input);
             }
 
             if (input.IsQueryInput())
             {
+                input = RemoveInputPrefix(input);
                 return SearchData(input);
             }
 
             return "No valid input has been provided.";
+        }
+
+        /// <summary>
+        /// Removes the index or query prefix given by the input
+        /// </summary>
+        private static string RemoveInputPrefix(string input)
+        {
+            return input.Remove(0, 5);
         }
 
         private static string PromptUser()
@@ -140,7 +150,8 @@ namespace SearchEngine.Cmd
             var docCreation = new DocumentDto();
             var tokensArray = input.Split(' ');
 
-            bool ok = int.TryParse(tokensArray[0], out int id);
+            // index 0 is empty string from method
+            bool ok = int.TryParse(tokensArray[1], out int id);
 
             if (!ok)
             {
@@ -164,7 +175,7 @@ namespace SearchEngine.Cmd
             bool valid = true;
 
             List<TokenDto> tokensList = new();
-            for (int i = 1; i < tokens.Length; i++)
+            for (int i = 2; i < tokens.Length; i++)
             {
                 tokenContent = tokens[i];
                 valid = CheckTokenIfValid(tokenContent);
