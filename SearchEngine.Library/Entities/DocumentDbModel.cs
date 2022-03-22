@@ -4,12 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SearchEngine.Library.Models
+namespace SearchEngine.Library.Entities
 {
-    class TokenDbModel
+    class DocumentDbModel
     {
         public int Id { get; set; }
-        public string Content { get; set; }
-        public int DocumentId { get; set; }
     }
 }

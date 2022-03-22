@@ -1,14 +1,10 @@
-﻿using Dapper;
-using Microsoft.Extensions.Configuration;
-using SearchEngine.Library.Helpers;
+﻿using SearchEngine.Library.Helpers;
 using SearchEngine.Library.Internal;
-using SearchEngine.Library.Models;
+using SearchEngine.Library.Dtos;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using SearchEngine.Library.Entities;
 
 namespace SearchEngine.Library.DataAccess
 {
@@ -21,9 +17,13 @@ namespace SearchEngine.Library.DataAccess
             _connString = connectionString ?? throw new ArgumentNullException(nameof(connectionString), "Connection string can't be null");
         }
 
-        public void CreateDocument(DocumentForCreationModel document)
+        public void CreateDocument(DocumentDto document)
         {
-            CheckIfDocumentIsValid(document);
+            bool valid = CheckIfDocumentIsValid(document);
+            if (!valid)
+            {
+                throw new ArgumentException("The content provided is invalid, all tokens need to be alphanumerical!");
+            }
 
             SqlDataAccess sql = new(_connString);
             int Id = document.Id;
@@ -60,23 +60,22 @@ namespace SearchEngine.Library.DataAccess
             return results;
         }
 
-        private void CheckIfDocumentIsValid(DocumentForCreationModel document)
+        private bool CheckIfDocumentIsValid(DocumentDto document)
         {
             if (document is null)
             {
-                throw new ArgumentNullException(nameof(document), "Invalid document passed in.");
+                return false;
             }
 
-            CheckIfTokensAreValid(document.Tokens);
+            return CheckIfTokensAreValid(document.Tokens);
         }
 
-        private void CheckIfTokensAreValid(ICollection<TokenForCreationModel> tokens)
+        /// <summary>
+        /// Checks if tokens collection is valid.
+        /// </summary>
+        private bool CheckIfTokensAreValid(ICollection<TokenDto> tokens)
         {
-            bool tokensValid = tokens.All(x => CheckTokenContentIfValid(x.Content));
-            if (!tokensValid)
-            {
-                throw new FormatException("One of the tokens is not alphanumerical.");
-            }
+            return tokens.All(x => CheckTokenContentIfValid(x.Content));
         }
 
         /// <summary>
@@ -167,21 +166,28 @@ namespace SearchEngine.Library.DataAccess
             return query;
         }
 
-        private void InsertTokensForDocument(DocumentForCreationModel document, SqlDataAccess sql)
+        /// <summary>
+        /// Inserts the tokens of the provided document
+        /// </summary>
+        private void InsertTokensForDocument(DocumentDto document, SqlDataAccess sql)
         {
             string query = "INSERT INTO Tokens(Content, DocumentId) VALUES(@Content, @docId)";
             int Id = document.Id;
 
             try
             {
-                sql.SaveTokens(query,document.Tokens, Id);
+                sql.SaveTokens(query, document.Tokens, Id);
             }
             catch (Exception)
             {
                 throw new Exception($"Was not possible inserting the tokens for the document with id: {Id} to the database.");
-            }        
+            }
         }
 
+        /// <summary>
+        /// Inserts the document to the database.
+        /// </summary>
+        /// <param name="Id">Id of the document</param>
         private void InsertDocument(int Id, SqlDataAccess sql)
         {
             try
@@ -195,6 +201,10 @@ namespace SearchEngine.Library.DataAccess
             }
         }
 
+        /// <summary>
+        /// Deletes the specified document given by the id provided.
+        /// </summary>
+        /// <param name="Id">Document id to delete</param>
         private void DeleteDocument(int Id, SqlDataAccess sql)
         {
             try

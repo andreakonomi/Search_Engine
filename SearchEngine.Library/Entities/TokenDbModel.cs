@@ -4,12 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SearchEngine.Library.Models
+namespace SearchEngine.Library.Entities
 {
-    /// <summary>
-    /// Represents a token model for client interfacing
-    /// </summary>
-    public class TokenModel
+    class TokenDbModel
     {
         public int Id { get; set; }
         public string Content { get; set; }

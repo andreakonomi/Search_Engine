@@ -1,6 +1,6 @@
 ﻿using Dapper;
 using Microsoft.Extensions.Configuration;
-using SearchEngine.Library.Models;
+using SearchEngine.Library.Dtos;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -54,7 +54,7 @@ namespace SearchEngine.Library.Internal
         //    }
         //}
 
-        public void SaveTokens(string query, ICollection<TokenForCreationModel> tokens, int docId)
+        public void SaveTokens(string query, ICollection<TokenDto> tokens, int docId)
         {
             using IDbConnection connection = new SQLiteConnection(_connString);
             foreach (var token in tokens)

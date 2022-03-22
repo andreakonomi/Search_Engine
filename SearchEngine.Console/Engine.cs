@@ -1,5 +1,5 @@
 ﻿using SearchEngine.Library.DataAccess;
-using SearchEngine.Library.Models;
+using SearchEngine.Library.Dtos;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,28 +10,42 @@ namespace SearchEngine.Cmd
 {
     public static class Engine
     {
-        static Dictionary<string, List<int>> TokenFilterCache = new();
+        private static Dictionary<string, List<int>> DocumentsIdCache = new();
 
         public static void Run()
         {
-            string input;
-            input = PromptUser();
+            string response = "";
+            string input = PromptUser();
 
-            while (input.ToLower() != "Exit".ToLower())
+            while (!input.IsExitInput())
             {
-                if (input.StartsWith("query"))
-                {
-                    Console.WriteLine(SearchData(input));
-                }
-                else
-                {
-                    Console.WriteLine(ProccessInput(input));
-                }
+                response = ProcessInput(input);
 
+                Console.WriteLine(response);
                 input = PromptUser();
             }
 
             Console.WriteLine("Your data is safe with us, see you again!");
+        }
+
+        private static string ProcessInput(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return "An empty input is not valid.";
+            }
+
+            if (input.IsIndexInput())
+            {
+                return InsertInput(input);
+            }
+
+            if (input.IsQueryInput())
+            {
+                return SearchData(input);
+            }
+
+            return "No valid input has been provided.";
         }
 
         private static string PromptUser()
@@ -40,24 +54,19 @@ namespace SearchEngine.Cmd
             return Console.ReadLine();
         }
 
-        private static string ProccessInput(string input)
+        private static string InsertInput(string input)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(input))
-                {
-                    return "You didn't input anything.";
-                }
-
-                // move this
                 string connString = Helper.GetConnectionString("Demo_Db");
-                var document = ParseDocument(input);
+
+                DocumentDto document = ParseDocument(input);
                 var docData = new DocumentData(connString);
 
                 docData.CreateDocument(document);
 
-                // cache no longer valid
-                TokenFilterCache.Clear();
+                // cache no longer validn after input
+                DocumentsIdCache.Clear();
 
                 return $"index ok {document.Id}";
             }
@@ -71,38 +80,47 @@ namespace SearchEngine.Cmd
         {
             string valuesFound;
             List<int> response;
-            query = query.Remove(0, 5);
 
-            response = CheckForCachedResponse(query);
-            if (response is null)
+            try
             {
-                string connString = Helper.GetConnectionString("Demo_Db");
-                var docData = new DocumentData(connString);
+                query = query.Remove(0, 5);
 
-                response = docData.SearchByTokens(query);
-                AddToCache(query, response);
+                response = CheckForCachedResponse(query);
+                if (response is null)
+                {
+                    string connString = Helper.GetConnectionString("Demo_Db");
+
+                    var docData = new DocumentData(connString);
+
+                    response = docData.SearchByTokens(query);
+                    AddToCache(query, response);
+                }
+
+                valuesFound = ConvertListToString(response);
             }
-
-            valuesFound = ConvertListToString(response);
+            catch (Exception ex)
+            {
+                return $"query error {ex.Message}";
+            }
 
             return $"query results {valuesFound}";
         }
 
         private static List<int> CheckForCachedResponse(string filterExpression)
         {
-            TokenFilterCache.TryGetValue(filterExpression, out List<int> idsFound);
+            DocumentsIdCache.TryGetValue(filterExpression, out List<int> idsFound);
 
             return idsFound;
         }
 
         private static void AddToCache(string queryExpression, List<int> ids)
         {
-            if (TokenFilterCache.Count == 100)
+            if (DocumentsIdCache.Count == 100)
             {
-                TokenFilterCache.Clear();
+                DocumentsIdCache.Clear();
             }
 
-            TokenFilterCache.Add(queryExpression, ids);
+            DocumentsIdCache.Add(queryExpression, ids);
         }
 
         private static string ConvertListToString(List<int> list)
@@ -117,12 +135,17 @@ namespace SearchEngine.Cmd
             return builder.ToString();
         }
 
-        static DocumentForCreationModel ParseDocument(string input)
+        static DocumentDto ParseDocument(string input)
         {
-            var docCreation = new DocumentForCreationModel();
+            var docCreation = new DocumentDto();
             var tokensArray = input.Split(' ');
 
             bool ok = int.TryParse(tokensArray[0], out int id);
+
+            if (!ok)
+            {
+                throw new ArgumentException("The id provided is not in the correct format. It needs to be numeric.");
+            }
 
             docCreation.Id = id;
             docCreation.Tokens = ParseContent(tokensArray);
@@ -130,28 +153,38 @@ namespace SearchEngine.Cmd
             return docCreation;
         }
 
-        static ICollection<TokenForCreationModel> ParseContent(string[] token)
+        /// <summary>
+        /// Parses the string array provided for content of tokens to a TokenDtoCollection.
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        static ICollection<TokenDto> ParseContent(string[] tokens)
         {
             string tokenContent = "";
             bool valid = true;
 
-            List<TokenForCreationModel> tokens = new();
-            for (int i = 1; i < token.Length; i++)
+            List<TokenDto> tokensList = new();
+            for (int i = 1; i < tokens.Length; i++)
             {
-                tokenContent = token[i];
+                tokenContent = tokens[i];
                 valid = CheckTokenIfValid(tokenContent);
 
                 if (!valid)
                 {
-                    throw new FormatException("All tokens need to be alphanumerical.");
+                    throw new FormatException($"Incorrect input! The value {tokenContent} is not alphanumerical.");
                 }
 
-                tokens.Add(new TokenForCreationModel { Content = token[i] });
+                tokensList.Add(new TokenDto { Content = tokenContent });
             }
 
-            return tokens;
+            return tokensList;
         }
 
+        /// <summary>
+        /// Checks if the format of the token contact is valid.
+        /// </summary>
+        /// <param name="token">Content to check.</param>
+        /// <returns>true if content is ok, false if not.</returns>
         static bool CheckTokenIfValid(string token)
         {
             return token.All(x => char.IsLetterOrDigit(x));
