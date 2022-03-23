@@ -103,6 +103,11 @@ namespace SearchEngine.Cmd
                     var docData = new DocumentData(connString);
 
                     response = docData.SearchByTokens(query);
+                    if (response is null)
+                    {
+                        return "query error Invalid query!";
+                    }
+
                     AddToCache(query, response);
                 }
 

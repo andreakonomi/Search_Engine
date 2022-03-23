@@ -1,5 +1,4 @@
-﻿using SearchEngine.Library.Helpers;
-using SearchEngine.Library.Internal;
+﻿using SearchEngine.Library.Internal;
 using SearchEngine.Library.Dtos;
 using System;
 using System.Collections.Generic;
@@ -108,79 +107,93 @@ namespace SearchEngine.Library.DataAccess
             DynamicParameters dynPars = new();
             var query = CreateQueryForData(queryExpression, ref dynPars);
 
-
-
-            //queryExpression = FormatFieldValuesForSqlQuery(queryExpression);
-
-            //queryExpression = queryExpression
-            //    .Replace("|", " or Content =", StringComparison.OrdinalIgnoreCase)
-            //    .Replace("&", " and Content =", StringComparison.OrdinalIgnoreCase)
-            //    .Replace("(", "(Content = ", StringComparison.OrdinalIgnoreCase);
-
-            //string query = "SELECT DISTINCT DocumentId from Tokens WHERE ";
-
-            //if (queryExpression.StartsWith('('))
-            //{
-            //    query += queryExpression;
-            //}
-            //else
-            //{
-            //    query += "Content = ";
-            //    query += queryExpression;
-            //}
-
-            //var newQuery = CheckQueryForAndCondition(query);
-
             var result = sql.LoadData<int, dynamic>(query, dynPars);
             return result;
         }
 
+        /// <summary>
+        /// Parses the initial query and forms the 
+        /// </summary>
+        /// <param name="query">The query to be parsed for the search</param>
+        /// <param name="dynPars">The dynamic parameters for the dapper execution</param>
+        /// <returns>The formed sql query to be executed</returns>
         private string CreateQueryForData(string query, ref DynamicParameters dynPars)
         {
             //a
             //a & b
             //a & (b | c)
-            string finalQuery;
-            var splitted = query.Split(" ");
-            int count = splitted.Count();
+            string finalQuery = "";
 
-            string parToPass = "";
-            int index = 1;
+            query = query.Replace("(", null).Replace(")", null);
+            var splittedArgs = query.Split(" ", StringSplitOptions.TrimEntries);
+            int count = splittedArgs.Length;
 
-            dynPars.Add("@par1", splitted[0]);
+            finalQuery = CreateSingleArgQuery(ref dynPars, splittedArgs[0]);
 
-            // add check for each token if alphanumerical??
-            finalQuery = $"SELECT DocumentId FROM Tokens WHERE Content = @par1";
-
-            if(count == 3)
+            if (count == 3)
             {
-                dynPars.Add("@par2", splitted[2]);
-                string boolOperator = splitted[1];
-
-                if (boolOperator == "|")
-                {
-                    finalQuery = AddOrClauseForNextArg(finalQuery, parToPass);
-                }
-                else if(boolOperator == "&")
-                {
-                    finalQuery = AddAndClauseForNextArg(finalQuery, parToPass);
-                }
+                string logicOperator = splittedArgs[1];
+                string nextValue = splittedArgs[2];
+                return CreateQueryForDoubleParameters(ref dynPars, finalQuery, nextValue, logicOperator);
             }
-            else
+
+            if (count == 5)
             {
-                finalQuery = HandleMultipleParameters(query, ref dynPars);
+                return HandleMultipleParameters(query, ref dynPars);
+            }
+
+            if (count > 5)
+            {
+                throw new ArgumentOutOfRangeException(nameof(query), "Query is too long to process.");
             }
 
             return finalQuery;
         }
 
+        /// <summary>
+        /// Creates the sql query and populates the args for the single argument case.
+        /// </summary>
+        /// <param name="dynPars">Reference that holds the sql parameters</param>
+        /// <param name="value">Value of the parameter</param>
+        /// <returns></returns>
+        private static string CreateSingleArgQuery(ref DynamicParameters dynPars, string value)
+        {
+            dynPars.Add("@par1", value);
+            return $"SELECT DISTINCT DocumentId FROM Tokens WHERE Content = @par1";
+        }
+
+        /// <summary>
+        /// Creates the sql query and populates the args for the double argument case.
+        /// </summary>
+        /// <param name="dynPars">Reference that holds the sql parameters</param>
+        /// <returns></returns>
+        private string CreateQueryForDoubleParameters(ref DynamicParameters dynPars, string query, string secondArg, string logicOperator)
+        {
+            dynPars.Add("@par2", secondArg);
+
+            if (logicOperator == "|")
+            {
+                query = AddOrClauseForNextArg(query);
+            }
+            else if (logicOperator == "&")
+            {
+                query = AddAndClauseForNextArg(query);
+            }
+
+            return query;
+        }
+
+        /// <summary>
+        /// Constructs and returns the formated sql query for triple arguments provided expression.
+        /// </summary>
+        /// <param name="initialQuery">The initialQuery passed</param>
+        /// <param name="dynPars">Reference that holds the sql parameters.</param>
+        /// <returns>The constructed sql query for the search</returns>
         private string HandleMultipleParameters(string initialQuery, ref DynamicParameters dynPars)
         {
             bool onlyAnds = !initialQuery.Contains('|');
             bool onlyOrs = !initialQuery.Contains('&');
             string finalQuery = "";
-
-            // add check if longer splitted return error, not valid query
 
             if (onlyAnds || onlyOrs)
             {
@@ -209,6 +222,13 @@ namespace SearchEngine.Library.DataAccess
             return finalQuery;
         }
 
+        /// <summary>
+        /// Constructs the sql query for triple arguments passed in and populates the 
+        /// sql paramters objects with their values.
+        /// </summary>
+        /// <param name="dynPars">Reference that holds the sql parameters and their values.</param>
+        /// <param name="initialQuery">The initial query passed in</param>
+        /// <returns></returns>
         private string CalculateMixedOperatorsQuery(ref DynamicParameters dynPars,string initialQuery)
         {
             string query = "";
@@ -216,10 +236,10 @@ namespace SearchEngine.Library.DataAccess
             string a, b, c;
 
             query = @"
-                SELECT DocumentId from Tokens
+                SELECT DocumentId FROM Tokens
                 WHERE Content IN (@par1, @par2)
                 INTERSECT
-                SELECT DocumentId from Tokens
+                SELECT DocumentId FROM Tokens
                 WHERE Content IN (@par3, @par4)
                 ";
 
@@ -282,11 +302,22 @@ namespace SearchEngine.Library.DataAccess
             return query;
         }
 
+        /// <summary>
+        /// Removes the (, ), &, | and empty characters from the query.
+        /// </summary>
         private string RemoveOperatorsSymbolsfromQuery(string query)
         {
             return query.Replace("&", null).Replace("|", null).Replace("(", null).Replace(")", null);
         }
 
+        /// <summary>
+        /// Constructs the query for a & b & c case
+        /// </summary>
+        /// <param name="dynPars">Reference that holds the sql parameters and their values.</param>
+        /// <param name="par1">First parameter given</param>
+        /// <param name="par2">Second parameter given</param>
+        /// <param name="par3">Third parameter given</param>
+        /// <returns>The constructed sql query for this case</returns>
         private string GiveOnlyDoubleAndsQuery(ref DynamicParameters dynPars, string par1, string par2, string par3)
         {
             dynPars.Add("@par1", par1);
@@ -295,14 +326,19 @@ namespace SearchEngine.Library.DataAccess
 
             return
                 $@"
-            select DocumentId from Tokens where Content = @par1
-            intersect
-            select DocumentId from Tokens where Content = @par2
-            intersect
-            select DocumentId from Tokens where Content = @par3
+            SELECT DocumentId FROM Tokens WHERE Content = @par1
+            INTERSECT
+            SELECT DocumentId FROM Tokens WHERE Content = @par2
+            INTERSECT
+            SELECT DocumentId FROM Tokens WHERE Content = @par3
                 ";
         }
 
+        /// <summary>
+        /// Constructs the query for the a | b | c case
+        /// </summary>
+        /// <param name="dynPars">Reference that holds the sql parameters and their values.</param>
+        /// <returns></returns>
         private string GiveOnlyDoubleOrsQuery(ref DynamicParameters dynPars, string par1, string par2, string par3)
         {
             dynPars.Add("@par1", par1);
@@ -311,41 +347,29 @@ namespace SearchEngine.Library.DataAccess
 
             return
                 $@"
-            select DocumentId from Tokens 
-            where Content IN (@par1, @par2, @par3)";
+            SELECT DISTINCT DocumentId from Tokens 
+            WHERE Content IN (@par1, @par2, @par3)";
         }
 
-        private string AddAndClauseForNextArg(string initialQuery, string parToPass)
+        /// <summary>
+        /// Appends the second part of the sql query for the and case filter
+        /// </summary>
+        /// <param name="initialQuery">Initial query being built</param>
+        /// <returns>Formatted query</returns>
+        private string AddAndClauseForNextArg(string initialQuery)
         {
-            return $"{initialQuery} \nINTERSECT\nSELECT DocumentId FROM Tokens WHERE Content = @par2";
+            return $"{initialQuery} \nINTERSECT\nSELECT DISTINCT DocumentId FROM Tokens WHERE Content = @par2";
         }
 
-        private string AddOrClauseForNextArg(string initialQuery, string parToPass)
+        /// <summary>
+        /// Appends the second part of the sql query for the or case filter
+        /// </summary>
+        /// <param name="initialQuery">Initial query being built</param>
+        /// <returns>Formatted query</returns>
+
+        private string AddOrClauseForNextArg(string initialQuery)
         {
             return $"{initialQuery} OR Content = @par2";
-        }
-
-        private string FormatFieldValuesForSqlQuery(string query)
-        {
-            string removedChars = query
-                .Replace("(", null)
-                .Replace(")", null)
-                .Replace("|", null)
-                .Replace("&", null);
-
-            var tokens = removedChars.Split(" ");
-
-            foreach (var value in tokens)
-            {
-                if (string.IsNullOrEmpty(value))
-                {
-                    continue;
-                }
-
-                query = query.ReplaceWholeWord(value, $"'{value}'");
-            }
-
-            return query;
         }
 
         /// <summary>
