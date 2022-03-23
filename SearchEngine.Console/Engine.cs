@@ -64,6 +64,9 @@ namespace SearchEngine.Cmd
             return Console.ReadLine();
         }
 
+        /// <summary>
+        /// Validates and inserts the given input by the user to the storage
+        /// </summary>
         private static string InsertInput(string input)
         {
             try
@@ -86,6 +89,10 @@ namespace SearchEngine.Cmd
             }
         }
 
+        /// <summary>
+        /// Searches for results based on the given query request.
+        /// </summary>
+        /// <param name="query">Query to ask for information.</param>
         private static string SearchData(string query)
         {
             string valuesFound;
@@ -102,7 +109,7 @@ namespace SearchEngine.Cmd
 
                     var docData = new DocumentData(connString);
 
-                    response = docData.SearchByTokens(query);
+                    response = docData.SearchByTokensContent(query);
                     if (response is null)
                     {
                         return "query error Invalid query!";
@@ -121,6 +128,9 @@ namespace SearchEngine.Cmd
             return $"query results {valuesFound}";
         }
 
+        /// <summary>
+        /// Checks the cache if a result has been stored for that request.
+        /// </summary>
         private static List<int> CheckForCachedResponse(string filterExpression)
         {
             DocumentsIdCache.TryGetValue(filterExpression, out List<int> idsFound);
@@ -128,6 +138,12 @@ namespace SearchEngine.Cmd
             return idsFound;
         }
 
+        /// <summary>
+        /// Adds the queryExpression and its result to the cache. If the cache has reached it's limit
+        /// clears the cache prior to adding.
+        /// </summary>
+        /// <param name="queryExpression">Query to store.</param>
+        /// <param name="ids">REsult of the query.</param>
         private static void AddToCache(string queryExpression, List<int> ids)
         {
             if (DocumentsIdCache.Count == 100)
@@ -138,6 +154,9 @@ namespace SearchEngine.Cmd
             DocumentsIdCache.Add(queryExpression, ids);
         }
 
+        /// <summary>
+        /// Converts the list of integers to a string representation.
+        /// </summary>
         private static string ConvertListToString(List<int> list)
         {
             StringBuilder builder = new();
@@ -150,6 +169,9 @@ namespace SearchEngine.Cmd
             return builder.ToString();
         }
 
+        /// <summary>
+        /// Parses a string input to a Document object for further processing.
+        /// </summary>
         static DocumentDto ParseDocument(string input)
         {
             var docCreation = new DocumentDto();
