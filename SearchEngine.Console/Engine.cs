@@ -66,8 +66,8 @@ namespace SearchEngine.Cmd
             {
                 string connString = Helper.GetConnectionString("Demo_Db");
 
-                DocumentDto document = ParseDocument(input);
-                var docData = new DocumentData(connString);
+                IDocumentDto document = ParseDocument(input);
+                IDocumentData docData = Factory.CreateDocumentData(connString);
 
                 docData.CreateDocument(document);
 
@@ -100,7 +100,7 @@ namespace SearchEngine.Cmd
                 {
                     string connString = Helper.GetConnectionString("Demo_Db");
 
-                    var docData = new DocumentData(connString);
+                    IDocumentData docData = Factory.CreateDocumentData(connString);
 
                     response = docData.SearchByTokensContent(query);
                     if (response is null)
@@ -152,11 +152,13 @@ namespace SearchEngine.Cmd
         /// </summary>
         private static string ConvertListToString(List<int> list)
         {
+            if (list.Count == 0) return "not found";
+
             StringBuilder builder = new();
 
             foreach (var item in list)
             {
-                builder.Append($" {item}");
+                builder.Append($"{item} ");
             }
 
             return builder.ToString();
@@ -165,9 +167,9 @@ namespace SearchEngine.Cmd
         /// <summary>
         /// Parses a string input to a Document object for further processing.
         /// </summary>
-        static DocumentDto ParseDocument(string input)
+        static IDocumentDto ParseDocument(string input)
         {
-            var docCreation = new DocumentDto();
+            var docCreation = Factory.CreateDocumentDto();
             var tokensArray = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
             // index 0 is empty string from method
@@ -189,7 +191,7 @@ namespace SearchEngine.Cmd
         /// </summary>
         /// <param name="token"></param>
         /// <returns></returns>
-        static ICollection<TokenDto> ParseContent(string[] tokens)
+        static ICollection<ITokenDto> ParseContent(string[] tokens)
         {
             string tokenContent = "";
             bool valid = true;
@@ -199,7 +201,7 @@ namespace SearchEngine.Cmd
                 throw new FormatException($"The document needs to have at least one token.");
             }
 
-            List<TokenDto> tokensList = new();
+            ICollection<ITokenDto> tokensList = Factory.CreateTokensCollection();
             for (int i = 1; i < tokens.Length; i++)
             {
                 tokenContent = tokens[i];
@@ -210,7 +212,7 @@ namespace SearchEngine.Cmd
                     throw new FormatException($"Incorrect input! The value {tokenContent} is not alphanumerical.");
                 }
 
-                tokensList.Add(new TokenDto { Content = tokenContent });
+                tokensList.Add(Factory.CreateToken(tokenContent));
             }
 
             return tokensList;

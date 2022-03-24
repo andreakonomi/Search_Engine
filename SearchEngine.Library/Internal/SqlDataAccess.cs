@@ -46,15 +46,7 @@ namespace SearchEngine.Library.Internal
             SaveData(query, parameters);
         }
 
-        //public void SaveMultipleData<T, U>(string query, List<T> parameters, U constantParameters)
-        //{
-        //    foreach (var param in parameters)
-        //    {
-        //        SaveData(query, new { param , constantParameters});
-        //    }
-        //}
-
-        public void SaveTokens(string query, ICollection<TokenDto> tokens, int docId)
+        public void SaveTokens(string query, ICollection<ITokenDto> tokens, int docId)
         {
             using IDbConnection connection = new SQLiteConnection(_connString);
             foreach (var token in tokens)

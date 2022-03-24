@@ -8,7 +8,7 @@ using Dapper;
 
 namespace SearchEngine.Library.DataAccess
 {
-    public class DocumentData
+    public class DocumentData : IDocumentData
     {
         private readonly string _connString;
 
@@ -17,7 +17,7 @@ namespace SearchEngine.Library.DataAccess
             _connString = connectionString ?? throw new ArgumentNullException(nameof(connectionString), "Connection string can't be null");
         }
 
-        public void CreateDocument(DocumentDto document)
+        public void CreateDocument(IDocumentDto document)
         {
             bool valid = CheckIfDocumentIsValid(document);
             if (!valid)
@@ -91,7 +91,7 @@ namespace SearchEngine.Library.DataAccess
         /// <summary>
         /// Inserts the tokens of the provided document
         /// </summary>
-        private void InsertTokensForDocument(DocumentDto document, SqlDataAccess sql)
+        private void InsertTokensForDocument(IDocumentDto document, SqlDataAccess sql)
         {
             string query = "INSERT INTO Tokens(Content, DocumentId) VALUES(@Content, @docId)";
             int Id = document.Id;
@@ -140,7 +140,7 @@ namespace SearchEngine.Library.DataAccess
             }
         }
 
-        private bool CheckIfDocumentIsValid(DocumentDto document)
+        private bool CheckIfDocumentIsValid(IDocumentDto document)
         {
             if (document is null)
             {
@@ -153,7 +153,7 @@ namespace SearchEngine.Library.DataAccess
         /// <summary>
         /// Checks if tokens collection is valid.
         /// </summary>
-        private bool CheckIfTokensAreValid(ICollection<TokenDto> tokens)
+        private bool CheckIfTokensAreValid(ICollection<ITokenDto> tokens)
         {
             return tokens.All(x => CheckTokenContentIfValid(x.Content));
         }

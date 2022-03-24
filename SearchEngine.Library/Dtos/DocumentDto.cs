@@ -9,14 +9,14 @@ namespace SearchEngine.Library.Dtos
     /// <summary>
     /// Representation of a document to be created.
     /// </summary>
-    public class DocumentDto
+    public class DocumentDto : IDocumentDto
     {
         public int Id { get; set; }
 
         /// <summary>
         /// Collection of Tokens linked to the document
         /// </summary>
-        public ICollection<TokenDto> Tokens { get; set; }
-            = new List<TokenDto>();
+        public ICollection<ITokenDto> Tokens { get; set; }
+            = new List<ITokenDto>();
     }
 }
