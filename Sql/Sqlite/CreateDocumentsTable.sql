@@ -1,0 +1,4 @@
+CREATE TABLE "Documents" (
+	"Id"	INTEGER NOT NULL,
+	CONSTRAINT "PK_Documents_Id" PRIMARY KEY("Id")
+)
