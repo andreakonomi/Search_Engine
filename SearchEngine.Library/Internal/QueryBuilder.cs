@@ -15,12 +15,13 @@ namespace SearchEngine.Library.Internal
         /// <param name="query">The query to be parsed for the search</param>
         /// <param name="dynPars">The dynamic parameters for the dapper execution</param>
         /// <returns>The formed sql query to be executed</returns>
-        public string CreateQueryForData(string query, ref DynamicParameters dynPars)
+        public string CreateQueryForData(string initialQuery, ref DynamicParameters dynPars)
         {
             //a
             //a & b
             //a & (b | c)
-            string finalQuery = "";
+            string finalQuery = ""; 
+            string query = initialQuery;
 
             query = query.Replace("(", null).Replace(")", null);
             var splittedArgs = query.Split(" ", StringSplitOptions.TrimEntries);
@@ -37,7 +38,7 @@ namespace SearchEngine.Library.Internal
 
             if (count == 5)
             {
-                return HandleMultipleParameters(query, ref dynPars);
+                return HandleMultipleParameters(initialQuery, ref dynPars);
             }
 
             if (count > 5)
@@ -178,14 +179,14 @@ namespace SearchEngine.Library.Internal
                 // mode (a | b) & c ; // mode a & (b | c)
                 if (indexOfClosingBrace < indexOfAndOperator)
                 {
-                    // mode (a | b) & (c | d) ; d is null
+                    // mode (a | b) & c    =   (a | b) & (c | d) ; d is null
                     par1 = a;
                     par2 = b;
                     par3 = c;
                 }
                 else
                 {
-                    // mode (a | b) & (b | c) ; b is null
+                    // mode a & (b | c)   =    (a | b) & (b | c) ; b is null
                     par1 = a;
                     par3 = b;
                     par4 = c;
